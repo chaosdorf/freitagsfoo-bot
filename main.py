@@ -17,6 +17,16 @@ def fetch_new_data():
 
 
 def watch_for_new_data():
+    from inotify.adapters import Inotify
+    inotify = Inotify()
+    inotify.add_watch(str(new_data_file))
+    for event in inotify.event_gen(yield_nones=False):
+        (_, type_names, path, filename) = event
+        if "IN_CLOSE_WRITE" in type_names:
+            got_new_data()
+
+
+def _poll():
     from time import sleep
     while True:  # TODO
         sleep(60)
