@@ -6,7 +6,7 @@ import os
 
 
 DateChanged = namedtuple("DateChanged", ("new_date",))
-HostsChanged = namedtuple("HostsChanged", ("hosts",))  # not tracking individuals
+HostsChanged = namedtuple("HostsChanged", ("old_hosts", "new_hosts"))  # not tracking individuals
 TalkAdded = namedtuple("TalkAdded", ("new_talk",))
 TalkRemoved = namedtuple("TalkRemoved", ("old_talk",))
 TalkChanged = namedtuple("TalkChanged", ("old_talk", "new_talk"))
@@ -51,11 +51,11 @@ def compare_data(old, new):
     if old["date"] != new["date"]:  # next week, no need to compare stuff
         if new["talks"] or new["hosts"] != ["FIXME"]:
             changes.append(DateChanged(new["date"]))
-            changes.append(HostsChanged(new["hosts"]))
+            changes.append(HostsChanged(list(), new["hosts"]))
             changes += [TalkAdded(talk) for talk in new["talks"]]
         return changes
     if old["hosts"] != new["hosts"]:
-        changes.append(HostsChanged(new["hosts"]))
+        changes.append(HostsChanged(old["hosts"], new["hosts"]))
     for talk in old["talks"]:
         matching_talk = find_matching_talk(talk, new["talks"])
         if not matching_talk:
