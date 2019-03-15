@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 from collections import namedtuple
+from telegram import ParseMode, Bot
 import json
 import os
 
@@ -79,10 +80,53 @@ def find_matching_talk(original_talk, list_of_talks):
             return possibility
 
 
+def _format_talk(talk):
+    return " \* {} ({})\n".format(
+        talk["title"],
+        ", ".join(talk["persons"]),
+    )
+
+
 def publish_changes(changes):
     print("**************")
-    for change in changes:
-        print(change)
+    print(changes)
+    if not changes:
+        return
+    date_changed = tuple(filter(lambda x: isinstance(x, DateChanged), changes))
+    hosts_changed = tuple(filter(lambda x: isinstance(x, HostsChanged), changes))
+    talks_added = tuple(filter(lambda x: isinstance(x, TalkAdded), changes))
+    talks_changed = tuple(filter(lambda x: isinstance(x, TalkChanged), changes))
+    talks_removed = tuple(filter(lambda x: isinstance(x, TalkRemoved), changes))
+    output = ""
+    if date_changed:
+        date = date_changed[0].new_date
+        output += f"*Talks on {date}*:\n\n"
+    else:
+        date = current_data["date"]
+        output += f"*Changes to talks on {date}*:\n\n"
+    if talks_added:
+        output += "Talks added:\n"
+        for talk_added in talks_added:
+            output += _format_talk(talk_added.new_talk)
+        output += "\n"
+    if talks_changed:
+        output += "Talks changed:\n"
+        for talk_changed in talks_changed:
+            output += _format_talk(talk_changed.new_talk)  # TODO
+        output += "\n"
+    if talks_removed:
+        output += "Talks removed:\n"
+        for talk_removed in talks_removed:
+            output += _format_talk(talk_removed.old_talk)
+        output += "\n"
+    if hosts_changed:
+        output += "New hosts: {} (instead of {})\n".format(
+            ", ".join(hosts_changed[0].new_hosts),
+            ", ".join(hosts_changed[0].old_hosts),
+        )  # TODO: []
+    print(output)
+    for chat_id in chat_ids:
+        bot.sendMessage(chat_id=chat_id, text=output, parse_mode=ParseMode.MARKDOWN)
 
 
 data_path = Path("data")
@@ -98,4 +142,6 @@ except FileNotFoundError:
 
 assert current_data
 
+bot = Bot(token=os.environ["TELEGRAM_API_KEY"])
+chat_ids = [int(x) for x in os.environ["CHAT_IDS"].split(",")]
 watch_for_new_data()
