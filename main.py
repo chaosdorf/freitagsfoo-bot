@@ -100,10 +100,10 @@ def publish_changes(changes):
     output = ""
     if date_changed:
         date = date_changed[0].new_date
-        output += f"*Talks on {date}*:\n\n"
+        output += "*Talks on {}*:\n\n".format(date)
     else:
         date = current_data["date"]
-        output += f"*Changes to talks on {date}*:\n\n"
+        output += "*Changes to talks on {}*:\n\n".format(date)
     if talks_added:
         output += "Talks added:\n"
         for talk_added in talks_added:
