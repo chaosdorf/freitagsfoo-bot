@@ -1,0 +1,10 @@
+[Unit]
+Description=Posts changes to freitagsfoo.json to Telegram groups.
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ytvwld/freitagsfoo-telegram-bot
+ExecStart=/usr/bin/python3 -m pipenv run ./main.py
+
+[Install]
+WantedBy=default.target
