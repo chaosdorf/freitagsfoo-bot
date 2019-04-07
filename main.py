@@ -50,7 +50,7 @@ def got_new_data():
 def compare_data(old, new):
     changes = list()
     if old["date"] != new["date"]:  # next week, no need to compare stuff
-        if new["talks"] or new["hosts"] != ["FIXME"]:
+        if new["talks"] or new["hosts"] != ["fixme"]:
             changes.append(DateChanged(new["date"]))
             changes.append(HostsChanged(list(), new["hosts"]))
             changes += [TalkAdded(talk) for talk in new["talks"]]
