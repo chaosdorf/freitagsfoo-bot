@@ -4,6 +4,7 @@ from collections import namedtuple
 from telegram import ParseMode, Bot
 import json
 import os
+import logging
 
 
 DateChanged = namedtuple("DateChanged", ("new_date",))
@@ -41,8 +42,11 @@ def save_current_data():
 def got_new_data():
     global current_data
     new_data = fetch_new_data()
+    logging.debug("Got new data: %s", new_data)
     changes = compare_data(current_data, new_data)
+    logging.debug("Computed changes: %s", changes)
     publish_changes(changes)
+    logging.debug("Published.")
     current_data = new_data
     save_current_data()
 
@@ -88,8 +92,6 @@ def _format_talk(talk):
 
 
 def publish_changes(changes):
-    print("**************")
-    print(changes)
     if not changes:
         return
     date_changed = tuple(filter(lambda x: isinstance(x, DateChanged), changes))
@@ -144,4 +146,5 @@ assert current_data
 
 bot = Bot(token=os.environ["TELEGRAM_API_KEY"])
 chat_ids = [int(x) for x in os.environ["CHAT_IDS"].split(",")]
+logging.debug("Waiting for data...")
 watch_for_new_data()
