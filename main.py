@@ -131,6 +131,9 @@ def publish_changes(changes):
         bot.sendMessage(chat_id=chat_id, text=output, parse_mode=ParseMode.MARKDOWN)
 
 
+if os.environ.get("LOGLEVEL"):
+    logging.basicConfig(level=getattr(logging, os.environ["LOGLEVEL"].upper()))
+
 data_path = Path("data")
 current_data_file = data_path / Path("current.json")
 new_data_file = Path(os.environ.get("NEW_DATA_FILE", "new.json"))
