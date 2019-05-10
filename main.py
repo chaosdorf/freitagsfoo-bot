@@ -131,23 +131,23 @@ def publish_changes(changes):
         bot.sendMessage(chat_id=chat_id, text=output, parse_mode=ParseMode.MARKDOWN)
 
 
-if os.environ.get("LOGLEVEL"):
-    logging.basicConfig(level=getattr(logging, os.environ["LOGLEVEL"].upper()))
-
-data_path = Path("data")
-current_data_file = data_path / Path("current.json")
-new_data_file = Path(os.environ.get("NEW_DATA_FILE", "new.json"))
-current_data = None
-
-try:
-    current_data = json.loads(current_data_file.read_text())
-except FileNotFoundError:
-    current_data = fetch_new_data()
-    save_current_data()
-
-assert current_data
-
-bot = Bot(token=os.environ["TELEGRAM_API_KEY"])
-chat_ids = [int(x) for x in os.environ["CHAT_IDS"].split(",")]
-logging.debug("Waiting for data...")
-watch_for_new_data()
+if __name__ == '__main__':
+    if os.environ.get("LOGLEVEL"):
+        logging.basicConfig(level=getattr(logging, os.environ["LOGLEVEL"].upper()))
+    
+    data_path = Path("data")
+    current_data_file = data_path / Path("current.json")
+    new_data_file = Path(os.environ.get("NEW_DATA_FILE", "new.json"))
+    current_data = None
+    
+    try:
+        current_data = json.loads(current_data_file.read_text())
+    except FileNotFoundError:
+        current_data = fetch_new_data()
+        save_current_data()
+    
+    assert current_data
+    bot = Bot(token=os.environ["TELEGRAM_API_KEY"])
+    chat_ids = [int(x) for x in os.environ["CHAT_IDS"].split(",")]
+    logging.debug("Waiting for data...")
+    watch_for_new_data()
