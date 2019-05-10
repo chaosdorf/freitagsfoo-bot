@@ -69,7 +69,7 @@ def compare_data(old, new):
             if talk != matching_talk:
                 changes.append(TalkChanged(talk, matching_talk))
     for talk in new["talks"]:
-        matching_talk = find_matching_talk(talk, new["talks"])
+        matching_talk = find_matching_talk(talk, old["talks"])
         if not matching_talk:
             changes.append(TalkAdded(talk))
         # no need to track modified talks here, see above
