@@ -1,24 +1,36 @@
 #!/usr/bin/env python3
 from pathlib import Path
-from collections import namedtuple
 from telegram import ParseMode, Bot
+from mypy_extensions import TypedDict
+from typing import List, NamedTuple, Optional, Tuple, Union
 import json
 import os
 import logging
 
-
-DateChanged = namedtuple("DateChanged", ("new_date",))
-HostsChanged = namedtuple("HostsChanged", ("old_hosts", "new_hosts"))  # not tracking individuals
-TalkAdded = namedtuple("TalkAdded", ("new_talk",))
-TalkRemoved = namedtuple("TalkRemoved", ("old_talk",))
-TalkChanged = namedtuple("TalkChanged", ("old_talk", "new_talk"))
+# has to be in sync with freitagsfoo-wiki-json
+Talk = TypedDict("Talk", {
+    "title": str,
+    "description": str,
+    "persons": List[str],
+})
+TalksData = TypedDict("TalksData", {
+    "hosts": List[str],
+    "date": str,
+    "talks": List[Talk],
+})
+DateChanged = NamedTuple("DateChanged", (("new_date", str),))
+HostsChanged = NamedTuple("HostsChanged", (("old_hosts", List[str]), ("new_hosts", List[str])))  # not tracking individuals
+TalkAdded = NamedTuple("TalkAdded", (("new_talk", Talk),))
+TalkRemoved = NamedTuple("TalkRemoved", (("old_talk", Talk),))
+TalkChanged = NamedTuple("TalkChanged", (("old_talk", Talk), ("new_talk", Talk)))
+Change = Union[DateChanged, HostsChanged, TalkAdded, TalkRemoved, TalkChanged]
 
 
 def fetch_new_data():
     return json.loads(new_data_file.read_text())
 
 
-def watch_for_new_data():
+def watch_for_new_data() -> None:
     from inotify.adapters import Inotify
     inotify = Inotify()
     inotify.add_watch(str(new_data_file))
@@ -28,18 +40,18 @@ def watch_for_new_data():
             got_new_data()
 
 
-def _poll():
+def _poll() -> None:
     from time import sleep
     while True:  # TODO
         sleep(60)
         got_new_data()
 
 
-def save_current_data():
+def save_current_data() -> None:
     current_data_file.write_text(json.dumps(current_data))
 
 
-def got_new_data():
+def got_new_data() -> None:
     global current_data
     new_data = fetch_new_data()
     logging.debug("Got new data: %s", new_data)
@@ -51,8 +63,8 @@ def got_new_data():
     save_current_data()
 
 
-def compare_data(old, new):
-    changes = list()
+def compare_data(old: TalksData, new: TalksData) -> List[Change]:
+    changes = list()  # type: List[Change]
     if old["date"] != new["date"]:  # next week, no need to compare stuff
         if new["talks"] or new["hosts"] != ["fixme"]:
             changes.append(DateChanged(new["date"]))
@@ -76,29 +88,30 @@ def compare_data(old, new):
     return changes
 
 
-def find_matching_talk(original_talk, list_of_talks):
+def find_matching_talk(original_talk: Talk, list_of_talks: List[Talk]) -> Optional[Talk]:
     """Find a talk in list_of_talks that matches original_talk."""
     # TODO: improve
     for possibility in list_of_talks:
         if original_talk["title"] == possibility["title"]:
             return possibility
+    return None
 
 
-def _format_talk(talk):
+def _format_talk(talk: Talk) -> str:
     return " \* {} ({})\n".format(
         talk["title"],
         ", ".join(talk["persons"]),
     )
 
 
-def publish_changes(changes):
+def publish_changes(changes: List[Change]) -> None:
     if not changes:
         return
-    date_changed = tuple(filter(lambda x: isinstance(x, DateChanged), changes))
-    hosts_changed = tuple(filter(lambda x: isinstance(x, HostsChanged), changes))
-    talks_added = tuple(filter(lambda x: isinstance(x, TalkAdded), changes))
-    talks_changed = tuple(filter(lambda x: isinstance(x, TalkChanged), changes))
-    talks_removed = tuple(filter(lambda x: isinstance(x, TalkRemoved), changes))
+    date_changed = tuple(filter(lambda x: isinstance(x, DateChanged), changes))  # type: Tuple[DateChanged, ...]
+    hosts_changed = tuple(filter(lambda x: isinstance(x, HostsChanged), changes))  # type: Tuple[HostsChanged, ...]
+    talks_added = tuple(filter(lambda x: isinstance(x, TalkAdded), changes))  # type: Tuple[TalkAdded, ...]
+    talks_changed = tuple(filter(lambda x: isinstance(x, TalkChanged), changes))  # type: Tuple[TalkChanged, ...]
+    talks_removed = tuple(filter(lambda x: isinstance(x, TalkRemoved), changes))  # type: Tuple[TalkRemoved, ...]
     output = ""
     if date_changed:
         date = date_changed[0].new_date

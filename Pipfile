@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 inotify = "*"
 python-telegram-bot = "*"
+mypy-extensions = "*"
 
 [dev-packages]
 
