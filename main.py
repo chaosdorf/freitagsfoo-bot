@@ -139,6 +139,7 @@ def publish_changes(changes: List[Change]) -> None:
             ", ".join(hosts_changed[0].new_hosts),
             ", ".join(hosts_changed[0].old_hosts),
         )  # TODO: []
+    output += "See the wiki for more details: https://wiki.chaosdorf.de/Freitagsfoo/{}\n".format(date)
     print(output)
     for chat_id in chat_ids:
         bot.sendMessage(chat_id=chat_id, text=output, parse_mode=ParseMode.MARKDOWN)
