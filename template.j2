@@ -1,0 +1,34 @@
+{% macro format_talk(talk) %}
+ \* {{ talk.title }} ({{ ", ".join(talk.persons) }})
+{% endmacro %}
+{##}
+{% if date_changed %}
+*Talks on {{ date }}*:
+{% else %}
+*Changes to talks on {{ date }}*:
+{% endif %}
+
+{% if talks_added %}
+Talks added:
+{% for talk_added in talks_added %}{{ format_talk(talk_added.new_talk) }}{% endfor %}
+
+{% endif %}
+{##}
+{% if talks_changed %}
+Talks changed:
+{% for talk_changed in talks_changed %}{{ format_talk(talk_changed.new_talk) }}{% endfor %}
+
+{% endif %}
+{##}
+{% if talks_removed %}
+Talks removed:
+{% for talk_removed in talks_removed %}{{ format_talk(talk_removed.old_talk) }}{% endfor %}
+
+{% endif %}
+{##}
+{% if hosts_changed %}
+New hosts: {{ ", ".join(hosts_changed[0].new_hosts) }} (instead of {{ ", ".join(hosts_changed[0].old_hosts) }})
+
+{% endif %}
+{##}
+See the wiki for more details: https://wiki.chaosdorf.de/Freitagsfoo/{{ date }}

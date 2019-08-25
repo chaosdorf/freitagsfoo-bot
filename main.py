@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+from jinja2 import Environment, FileSystemLoader
 from telegram import ParseMode, Bot
 from mypy_extensions import TypedDict
 from typing import List, NamedTuple, Optional, Tuple, Union
@@ -97,13 +98,6 @@ def find_matching_talk(original_talk: Talk, list_of_talks: List[Talk]) -> Option
     return None
 
 
-def _format_talk(talk: Talk) -> str:
-    return " \* {} ({})\n".format(
-        talk["title"],
-        ", ".join(talk["persons"]),
-    )
-
-
 def publish_changes(changes: List[Change]) -> None:
     if not changes:
         return
@@ -112,34 +106,15 @@ def publish_changes(changes: List[Change]) -> None:
     talks_added = tuple(filter(lambda x: isinstance(x, TalkAdded), changes))  # type: Tuple[TalkAdded, ...]
     talks_changed = tuple(filter(lambda x: isinstance(x, TalkChanged), changes))  # type: Tuple[TalkChanged, ...]
     talks_removed = tuple(filter(lambda x: isinstance(x, TalkRemoved), changes))  # type: Tuple[TalkRemoved, ...]
-    output = ""
-    if date_changed:
-        date = date_changed[0].new_date
-        output += "*Talks on {}*:\n\n".format(date)
-    else:
-        date = current_data["date"]
-        output += "*Changes to talks on {}*:\n\n".format(date)
-    if talks_added:
-        output += "Talks added:\n"
-        for talk_added in talks_added:
-            output += _format_talk(talk_added.new_talk)
-        output += "\n"
-    if talks_changed:
-        output += "Talks changed:\n"
-        for talk_changed in talks_changed:
-            output += _format_talk(talk_changed.new_talk)  # TODO
-        output += "\n"
-    if talks_removed:
-        output += "Talks removed:\n"
-        for talk_removed in talks_removed:
-            output += _format_talk(talk_removed.old_talk)
-        output += "\n"
-    if hosts_changed:
-        output += "New hosts: {} (instead of {})\n".format(
-            ", ".join(hosts_changed[0].new_hosts),
-            ", ".join(hosts_changed[0].old_hosts),
-        )  # TODO: []
-    output += "See the wiki for more details: https://wiki.chaosdorf.de/Freitagsfoo/{}\n".format(date)
+    date = date_changed[0].new_date if date_changed else current_data["date"]
+    output = jinja_templ.render(
+        date=date,
+        date_changed=date_changed,
+        talks_added=talks_added,
+        talks_changed=talks_changed,
+        talks_removed=talks_removed,
+        hosts_changed=hosts_changed,
+    )
     print(output)
     for chat_id in chat_ids:
         bot.sendMessage(chat_id=chat_id, text=output, parse_mode=ParseMode.MARKDOWN)
@@ -161,6 +136,13 @@ if __name__ == '__main__':
         save_current_data()
     
     assert current_data
+    
+    jinja_env = Environment(
+        loader=FileSystemLoader("."),
+        trim_blocks=True,
+        lstrip_blocks=True,
+    )
+    jinja_templ = jinja_env.get_template("template.j2")
     bot = Bot(token=os.environ["TELEGRAM_API_KEY"])
     chat_ids = [int(x) for x in os.environ["CHAT_IDS"].split(",")]
     logging.debug("Waiting for data...")
