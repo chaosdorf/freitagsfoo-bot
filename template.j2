@@ -1,5 +1,7 @@
 {% macro format_talk(talk) %}
- \* {{ talk.title }} ({{ ", ".join(talk.persons) }})
+{{ talk.title }} ({{ ", ".join(talk.persons) }})
+{{ talk.description }}
+
 {% endmacro %}
 {##}
 {% if date_changed %}
