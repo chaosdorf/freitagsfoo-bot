@@ -10,5 +10,6 @@ mypy-extensions = "*"
 jinja2 = "*"
 
 [dev-packages]
+python-language-server = {extras = ["all"],version = "*"}
 
 [requires]
