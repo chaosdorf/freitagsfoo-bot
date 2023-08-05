@@ -1,0 +1,11 @@
+[Unit]
+Description=Posts changes to freitagsfoo.json to Matrix rooms.
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ytvwld/freitagsfoo-bot
+ExecStart=/home/ytvwld/.local/bin/pipenv run ./main.py
+Environment=LANG=C.UTF-8
+
+[Install]
+WantedBy=default.target

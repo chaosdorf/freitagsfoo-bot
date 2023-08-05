@@ -1,2 +1,2 @@
-# freitagsfoo-telegram-bot
-Posts changes to freitagsfoo.json to Telegram groups.
+# freitagsfoo-bot
+Posts changes to freitagsfoo.json to Matrix rooms.

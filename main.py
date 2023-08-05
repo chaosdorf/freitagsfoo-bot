@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import asyncio
+from asyncinotify import Inotify, Mask
 from pathlib import Path
-from jinja2 import Environment, FileSystemLoader
-from telegram import ParseMode, Bot
+from jinja2 import Environment, FileSystemLoader, Template
+from nio import AsyncClient
 from mypy_extensions import TypedDict
 from typing import List, NamedTuple, Optional, Tuple, Union
 import json
@@ -27,41 +29,38 @@ TalkChanged = NamedTuple("TalkChanged", (("old_talk", Talk), ("new_talk", Talk))
 Change = Union[DateChanged, HostsChanged, TalkAdded, TalkRemoved, TalkChanged]
 
 
-def fetch_new_data():
+def fetch_new_data(new_data_file: Path) -> TalksData:
     return json.loads(new_data_file.read_text())
 
 
-def watch_for_new_data() -> None:
-    from inotify.adapters import Inotify
+async def watch_for_new_data(client: AsyncClient, room_ids: List[str], jinja_templ: Template, current_data_file: Path, new_data_file: Path) -> None:
     inotify = Inotify()
-    inotify.add_watch(str(new_data_file))
-    for event in inotify.event_gen(yield_nones=False):
-        (_, type_names, path, filename) = event
-        if "IN_CLOSE_WRITE" in type_names:
-            got_new_data()
+    inotify.add_watch(str(new_data_file), Mask.CLOSE)
+    async for event in inotify:
+        await got_new_data(client, room_ids, jinja_templ, current_data_file, new_data_file)
 
 
-def _poll() -> None:
+async def _poll(client: AsyncClient, room_ids: List[str], jinja_templ: Template, current_data_file: Path, new_data_file: Path) -> None:
     from time import sleep
     while True:  # TODO
         sleep(60)
-        got_new_data()
+        await got_new_data(client, room_ids, jinja_templ, current_data_file, new_data_file)
 
 
-def save_current_data() -> None:
+def save_current_data(current_data: TalksData, current_data_file: Path) -> None:
     current_data_file.write_text(json.dumps(current_data))
 
 
-def got_new_data() -> None:
+async def got_new_data(client: AsyncClient, room_ids: List[str], jinja_templ: Template, current_data_file: Path, new_data_file: Path) -> None:
     global current_data
-    new_data = fetch_new_data()
+    new_data = fetch_new_data(new_data_file)
     logging.debug("Got new data: %s", new_data)
     changes = compare_data(current_data, new_data)
     logging.debug("Computed changes: %s", changes)
-    publish_changes(changes)
+    await publish_changes(client, room_ids, jinja_templ, changes)
     logging.debug("Published.")
     current_data = new_data
-    save_current_data()
+    save_current_data(current_data, current_data_file)
 
 
 def compare_data(old: TalksData, new: TalksData) -> List[Change]:
@@ -98,7 +97,7 @@ def find_matching_talk(original_talk: Talk, list_of_talks: List[Talk]) -> Option
     return None
 
 
-def publish_changes(changes: List[Change]) -> None:
+async def publish_changes(client: AsyncClient, room_ids: List[str], jinja_templ: Template, changes: List[Change]) -> None:
     if not changes:
         return
     date_changed = tuple(filter(lambda x: isinstance(x, DateChanged), changes))  # type: Tuple[DateChanged, ...]
@@ -107,7 +106,7 @@ def publish_changes(changes: List[Change]) -> None:
     talks_changed = tuple(filter(lambda x: isinstance(x, TalkChanged), changes))  # type: Tuple[TalkChanged, ...]
     talks_removed = tuple(filter(lambda x: isinstance(x, TalkRemoved), changes))  # type: Tuple[TalkRemoved, ...]
     date = date_changed[0].new_date if date_changed else current_data["date"]
-    output = jinja_templ.render(
+    output_md = jinja_templ.render(
         date=date,
         date_changed=date_changed,
         talks_added=talks_added,
@@ -115,12 +114,22 @@ def publish_changes(changes: List[Change]) -> None:
         talks_removed=talks_removed,
         hosts_changed=hosts_changed,
     )
-    print(output)
-    for chat_id in chat_ids:
-        bot.sendMessage(chat_id=chat_id, text=output, parse_mode=ParseMode.MARKDOWN)
+    print(output_md)
+    for room_id in room_ids:
+        await client.room_send(
+            room_id=room_id,
+            message_type="m.room.message",
+            content={
+                "msgtype": "m.text",
+                # TODO: "format": "org.matrix.custom.html",
+                "body": output_md,
+                # TODO: "formatted_body": output_html,
+            },
+        )
 
 
-if __name__ == '__main__':
+async def main():
+    global current_data
     if os.environ.get("LOGLEVEL"):
         logging.basicConfig(level=getattr(logging, os.environ["LOGLEVEL"].upper()))
     
@@ -132,8 +141,8 @@ if __name__ == '__main__':
     try:
         current_data = json.loads(current_data_file.read_text())
     except FileNotFoundError:
-        current_data = fetch_new_data()
-        save_current_data()
+        current_data = fetch_new_data(new_data_file)
+        save_current_data(current_data, current_data_file)
     
     assert current_data
     
@@ -143,7 +152,13 @@ if __name__ == '__main__':
         lstrip_blocks=True,
     )
     jinja_templ = jinja_env.get_template("template.j2")
-    bot = Bot(token=os.environ["TELEGRAM_API_KEY"])
-    chat_ids = [int(x) for x in os.environ["CHAT_IDS"].split(",")]
+    client = AsyncClient(os.environ["MATRIX_HOMESERVER"], os.environ["MATRIX_USERNAME"])
+    room_ids = os.environ["MATRIX_ROOM_IDS"].split(",")
+    logging.info(await client.login(os.environ["MATRIX_PASSWORD"]))
     logging.debug("Waiting for data...")
-    watch_for_new_data()
+    syncer = asyncio.create_task(client.sync_forever(timeout=30000))
+    await watch_for_new_data(client, room_ids, jinja_templ, current_data_file, new_data_file)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
