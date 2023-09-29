@@ -3,6 +3,7 @@ import asyncio
 from asyncinotify import Inotify, Mask
 from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, Template
+from markdown import markdown
 from nio import AsyncClient
 from mypy_extensions import TypedDict
 from typing import List, NamedTuple, Optional, Tuple, Union
@@ -121,9 +122,9 @@ async def publish_changes(client: AsyncClient, room_ids: List[str], jinja_templ:
             message_type="m.room.message",
             content={
                 "msgtype": "m.text",
-                # TODO: "format": "org.matrix.custom.html",
+                "format": "org.matrix.custom.html",
                 "body": output_md,
-                # TODO: "formatted_body": output_html,
+                "formatted_body": markdown(output_md),
             },
         )
 

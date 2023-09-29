@@ -8,6 +8,7 @@ mypy-extensions = "*"
 jinja2 = "*"
 matrix-nio = "*"
 asyncinotify = "*"
+markdown = "*"
 
 [dev-packages]
 python-language-server = {extras = ["all"],version = "*"}
