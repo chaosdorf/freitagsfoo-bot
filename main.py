@@ -10,6 +10,7 @@ from typing import List, NamedTuple, Optional, Tuple, Union
 import json
 import os
 import logging
+import traceback
 
 # has to be in sync with freitagsfoo-wiki-json
 Talk = TypedDict("Talk", {
@@ -30,8 +31,15 @@ TalkChanged = NamedTuple("TalkChanged", (("old_talk", Talk), ("new_talk", Talk))
 Change = Union[DateChanged, HostsChanged, TalkAdded, TalkRemoved, TalkChanged]
 
 
-def fetch_new_data(new_data_file: Path) -> TalksData:
-    return json.loads(new_data_file.read_text())
+async def fetch_new_data(new_data_file: Path, backoff: int = 5) -> TalksData:
+    try:
+        data = json.loads(new_data_file.read_text())
+        return data
+    except:
+        print("Failed to get data, retrying:")
+        traceback.print_last()
+        await asyncio.sleep(backoff)
+        return await fetch_new_data(new_data_file, backoff * 2)
 
 
 async def watch_for_new_data(client: AsyncClient, room_ids: List[str], jinja_templ: Template, current_data_file: Path, new_data_file: Path) -> None:
@@ -54,7 +62,7 @@ def save_current_data(current_data: TalksData, current_data_file: Path) -> None:
 
 async def got_new_data(client: AsyncClient, room_ids: List[str], jinja_templ: Template, current_data_file: Path, new_data_file: Path) -> None:
     global current_data
-    new_data = fetch_new_data(new_data_file)
+    new_data = await fetch_new_data(new_data_file)
     logging.debug("Got new data: %s", new_data)
     changes = compare_data(current_data, new_data)
     logging.debug("Computed changes: %s", changes)
