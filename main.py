@@ -35,9 +35,9 @@ async def fetch_new_data(new_data_file: Path, backoff: int = 5) -> TalksData:
     try:
         data = json.loads(new_data_file.read_text())
         return data
-    except:
+    except Exception as exc:
         print("Failed to get data, retrying:")
-        traceback.print_last()
+        traceback.print_exception(exc)
         await asyncio.sleep(backoff)
         return await fetch_new_data(new_data_file, backoff * 2)
 
