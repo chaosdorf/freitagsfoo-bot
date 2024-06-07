@@ -151,7 +151,7 @@ async def main():
         current_data = json.loads(current_data_file.read_text())
     except:
         logging.warn("Failed to load old data")
-        current_data = fetch_new_data(new_data_file)
+        current_data = await fetch_new_data(new_data_file)
         save_current_data(current_data, current_data_file)
     
     assert current_data
