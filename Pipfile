@@ -11,6 +11,5 @@ asyncinotify = "*"
 markdown = "*"
 
 [dev-packages]
-python-language-server = {extras = ["all"],version = "*"}
 
 [requires]
