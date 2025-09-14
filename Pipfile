@@ -4,7 +4,6 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-mypy-extensions = "*"
 jinja2 = "*"
 matrix-nio = "*"
 asyncinotify = "*"

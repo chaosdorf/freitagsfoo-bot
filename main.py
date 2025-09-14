@@ -5,8 +5,7 @@ from pathlib import Path
 from jinja2 import Environment, FileSystemLoader, Template
 from markdown import markdown
 from nio import AsyncClient
-from mypy_extensions import TypedDict
-from typing import List, NamedTuple, Optional, Tuple, Union
+from typing import List, NamedTuple, Optional, Tuple, Union, TypedDict
 import json
 import os
 import logging
@@ -73,7 +72,7 @@ async def got_new_data(client: AsyncClient, room_ids: List[str], jinja_templ: Te
 
 
 def compare_data(old: TalksData, new: TalksData) -> List[Change]:
-    changes = list()  # type: List[Change]
+    changes: List[Change] = list()
     if old["date"] != new["date"]:  # next week, no need to compare stuff
         if new["talks"] or new["hosts"] != ["fixme"]:
             changes.append(DateChanged(new["date"]))
@@ -109,11 +108,11 @@ def find_matching_talk(original_talk: Talk, list_of_talks: List[Talk]) -> Option
 async def publish_changes(client: AsyncClient, room_ids: List[str], jinja_templ: Template, changes: List[Change]) -> None:
     if not changes:
         return
-    date_changed = tuple(filter(lambda x: isinstance(x, DateChanged), changes))  # type: Tuple[DateChanged, ...]
-    hosts_changed = tuple(filter(lambda x: isinstance(x, HostsChanged), changes))  # type: Tuple[HostsChanged, ...]
-    talks_added = tuple(filter(lambda x: isinstance(x, TalkAdded), changes))  # type: Tuple[TalkAdded, ...]
-    talks_changed = tuple(filter(lambda x: isinstance(x, TalkChanged), changes))  # type: Tuple[TalkChanged, ...]
-    talks_removed = tuple(filter(lambda x: isinstance(x, TalkRemoved), changes))  # type: Tuple[TalkRemoved, ...]
+    date_changed: Tuple[DateChanged, ...] = tuple(filter(lambda x: isinstance(x, DateChanged), changes))
+    hosts_changed: Tuple[HostsChanged, ...] = tuple(filter(lambda x: isinstance(x, HostsChanged), changes))
+    talks_added: Tuple[TalkAdded, ...] = tuple(filter(lambda x: isinstance(x, TalkAdded), changes))
+    talks_changed: Tuple[TalkChanged, ...] = tuple(filter(lambda x: isinstance(x, TalkChanged), changes))
+    talks_removed: Tuple[TalkRemoved, ...] = tuple(filter(lambda x: isinstance(x, TalkRemoved), changes))
     date = date_changed[0].new_date if date_changed else current_data["date"]
     output_md = jinja_templ.render(
         date=date,
