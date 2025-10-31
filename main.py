@@ -31,14 +31,14 @@ Change = Union[DateChanged, HostsChanged, TalkAdded, TalkRemoved, TalkChanged]
 
 
 async def fetch_new_data(new_data_file: Path, backoff: int = 5) -> TalksData:
-    try:
-        data = json.loads(new_data_file.read_text())
-        return data
-    except Exception as exc:
-        print("Failed to get data, retrying:")
-        traceback.print_exception(exc)
+    while True:
         await asyncio.sleep(backoff)
-        return await fetch_new_data(new_data_file, backoff * 2)
+        try:
+            return json.loads(new_data_file.read_text())
+        except Exception as exc:
+            print("Failed to get data, retrying:")
+            traceback.print_exception(exc)
+            backoff *= 2
 
 
 async def watch_for_new_data(client: AsyncClient, room_ids: List[str], jinja_templ: Template, current_data_file: Path, new_data_file: Path) -> None:
