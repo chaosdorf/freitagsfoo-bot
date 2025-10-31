@@ -124,7 +124,7 @@ async def publish_changes(client: AsyncClient, room_ids: List[str], jinja_templ:
     )
     print(output_md)
     for room_id in room_ids:
-        await client.room_send(
+        print(await client.room_send(
             room_id=room_id,
             message_type="m.room.message",
             content={
@@ -133,7 +133,7 @@ async def publish_changes(client: AsyncClient, room_ids: List[str], jinja_templ:
                 "body": output_md,
                 "formatted_body": markdown(output_md),
             },
-        )
+        ))
 
 
 async def main():
